@@ -45,31 +45,52 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="relative bg-brand">
-        <Link href={`/news/${hero.slug}`} className="group relative block aspect-[16/9] sm:aspect-[21/9]">
-          <MediaImage
-            media={hero.featuredImage}
-            priority
-            className="opacity-70 transition-opacity duration-200 group-hover:opacity-60"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/50 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0">
-            <Container className="flex flex-col gap-3 pb-8 pt-16 sm:pb-12">
+      {isLive ? (
+        <div className="bg-accent">
+          <Container className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <span className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-white">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden="true" />
+              {liveOrUpcoming.length} {liveOrUpcoming.length === 1 ? 'Match' : 'Matches'} Live Now
+            </span>
+            <Link
+              href="/how-to-watch"
+              className="rounded-md bg-white px-4 py-1.5 text-sm font-bold text-accent-dark transition-colors hover:bg-white/90"
+            >
+              Watch Live
+            </Link>
+          </Container>
+        </div>
+      ) : null}
+
+      <section className="bg-brand">
+        <Container className="py-8 sm:py-12">
+          <Link href={`/news/${hero.slug}`} className="group grid gap-6 lg:grid-cols-2 lg:items-center lg:gap-10">
+            {/* Image and text are separate (not stacked) so a text-heavy
+                placeholder cover graphic can never visually collide with the
+                real headline — see the overlay version this replaced. */}
+            <div className="aspect-[16/9] overflow-hidden rounded-lg bg-surface-alt">
+              <MediaImage
+                media={hero.featuredImage}
+                priority
+                className="transition-transform duration-200 group-hover:scale-[1.02]"
+              />
+            </div>
+            <div className="flex flex-col gap-3">
               {hero.category ? (
                 <span className="inline-flex w-fit items-center rounded-full bg-accent px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                   {hero.category.name}
                 </span>
               ) : null}
-              <h1 className="max-w-3xl text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
+              <h1 className="text-3xl font-extrabold leading-tight text-white sm:text-4xl">
                 {hero.title}
               </h1>
-              <p className="max-w-2xl text-base text-white/80 sm:text-lg">{hero.excerpt}</p>
+              <p className="max-w-xl text-base text-white/80 sm:text-lg">{hero.excerpt}</p>
               {hero.author ? (
                 <span className="text-sm font-semibold text-white/70">By {hero.author.name}</span>
               ) : null}
-            </Container>
-          </div>
-        </Link>
+            </div>
+          </Link>
+        </Container>
       </section>
 
       {liveOrUpcoming.length > 0 ? (
