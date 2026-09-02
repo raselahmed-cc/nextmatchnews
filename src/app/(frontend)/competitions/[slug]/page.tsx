@@ -7,6 +7,7 @@ import { MediaImage } from '@/components/MediaImage'
 import { TeamCard } from '@/components/TeamCard'
 import { Container } from '@/components/ui/Container'
 import { getFootballMatches } from '@/lib/football'
+import { getWatchGuideHrefForSport } from '@/lib/howToWatch'
 import { getNFLGames, NFL_GAMES_SPORT_SLUGS } from '@/lib/nfl'
 import { getAllCompetitionSlugs, getCompetitionBySlug, getTeamsByCompetition } from '@/lib/sports'
 
@@ -49,11 +50,12 @@ export default async function CompetitionPage({ params }: { params: Promise<{ sl
   // the note in src/lib/football.ts and src/lib/nfl.ts.
   const usesNFLGames = NFL_GAMES_SPORT_SLUGS.has(competition.sport.slug)
 
-  const [teams, matches] = await Promise.all([
+  const [teams, matches, watchHref] = await Promise.all([
     getTeamsByCompetition(competition.id),
     usesNFLGames
       ? getNFLGames({ competitionId: competition.id, limit: 6 }).then((result) => result.docs)
       : getFootballMatches({ competitionId: competition.id, limit: 6 }).then((result) => result.docs),
+    getWatchGuideHrefForSport(competition.sport.slug),
   ])
   const matchesBasePath = usesNFLGames ? '/nfl/games' : '/matches'
 
@@ -86,7 +88,7 @@ export default async function CompetitionPage({ params }: { params: Promise<{ sl
           <h2 className="mb-4 text-xl font-bold uppercase tracking-wide text-ink">Matches</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {matches.map((match) => (
-              <MatchCard key={match.id} match={match} basePath={matchesBasePath} />
+              <MatchCard key={match.id} match={match} basePath={matchesBasePath} watchHref={watchHref} />
             ))}
           </div>
         </div>

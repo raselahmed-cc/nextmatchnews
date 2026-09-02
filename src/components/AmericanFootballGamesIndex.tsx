@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { getWatchGuideHrefForSport } from '@/lib/howToWatch'
 import { getNFLGamesForSport } from '@/lib/nfl'
 import { Container } from './ui/Container'
 import { MatchCard } from './MatchCard'
@@ -19,10 +20,10 @@ export const AmericanFootballGamesIndex = async ({
   basePath: string
   page: number
 }) => {
-  const { docs: games, totalPages, hasNextPage, hasPrevPage } = await getNFLGamesForSport(sportSlug, {
-    limit: PAGE_SIZE,
-    page,
-  })
+  const [{ docs: games, totalPages, hasNextPage, hasPrevPage }, watchHref] = await Promise.all([
+    getNFLGamesForSport(sportSlug, { limit: PAGE_SIZE, page }),
+    getWatchGuideHrefForSport(sportSlug),
+  ])
 
   return (
     <Container className="py-10">
@@ -33,7 +34,7 @@ export const AmericanFootballGamesIndex = async ({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {games.map((game) => (
-            <MatchCard key={game.id} match={game} basePath={basePath} />
+            <MatchCard key={game.id} match={game} basePath={basePath} watchHref={watchHref} />
           ))}
         </div>
       )}
