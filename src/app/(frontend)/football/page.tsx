@@ -1,10 +1,17 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { ArticleCard } from '@/components/ArticleCard'
 import { CompetitionCard } from '@/components/CompetitionCard'
+import { HighlightCard } from '@/components/HighlightCard'
 import { MatchCard } from '@/components/MatchCard'
+import { MediaImage } from '@/components/MediaImage'
 import { Container } from '@/components/ui/Container'
+import { Section } from '@/components/ui/Section'
+import { getCategoryBySlug, getPublishedArticles } from '@/lib/data'
 import { getFootballMatches } from '@/lib/football'
+import { getHighlightsBySport } from '@/lib/highlights'
+import { getWatchGuideHrefForSport } from '@/lib/howToWatch'
 import { getCompetitionsBySport, getSportBySlug } from '@/lib/sports'
 
 export const revalidate = 60
@@ -14,6 +21,12 @@ export const metadata: Metadata = {
   description: 'Football competitions, teams, fixtures, and news.',
   alternates: { canonical: '/football' },
 }
+
+const ViewAllLink = ({ href }: { href: string }) => (
+  <Link href={href} className="text-sm font-semibold text-accent-dark hover:underline">
+    View all
+  </Link>
+)
 
 export default async function FootballPage() {
   const sport = await getSportBySlug('football')
@@ -32,42 +45,89 @@ export default async function FootballPage() {
     )
   }
 
-  const [competitions, { docs: upcomingMatches }] = await Promise.all([
+  const footballCategory = await getCategoryBySlug('football')
+
+  const [competitions, { docs: upcomingMatches }, highlights, { docs: articles }, watchHref] = await Promise.all([
     getCompetitionsBySport(sport.id),
     getFootballMatches({ upcomingOnly: true, limit: 6 }),
+    getHighlightsBySport('football', 6),
+    footballCategory
+      ? getPublishedArticles({ categoryId: footballCategory.id, limit: 6 })
+      : Promise.resolve({ docs: [] }),
+    getWatchGuideHrefForSport('football'),
   ])
 
+  const icon = sport.icon && typeof sport.icon === 'object' ? sport.icon : null
+
   return (
-    <Container className="py-10">
-      <h1 className="mb-2 text-3xl font-extrabold text-ink">Football</h1>
-      {sport.description ? <p className="mb-8 max-w-xl text-muted">{sport.description}</p> : null}
+    <>
+      <section className="relative overflow-hidden bg-brand">
+        {icon ? (
+          <div className="absolute inset-0">
+            <MediaImage media={icon} className="opacity-25" />
+            <div className="absolute inset-0 bg-gradient-to-t from-brand via-brand/85 to-brand/60" />
+          </div>
+        ) : null}
+        <Container className="relative flex flex-col gap-2 py-12 sm:py-16">
+          <span className="text-xs font-semibold uppercase tracking-widest text-accent">Sport Hub</span>
+          <h1 className="font-display text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">
+            {sport.name}
+          </h1>
+          {sport.description ? (
+            <p className="max-w-xl text-base text-white/75 sm:text-lg">{sport.description}</p>
+          ) : null}
+        </Container>
+      </section>
 
       {upcomingMatches.length > 0 ? (
-        <div className="mb-10">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold uppercase tracking-wide text-ink">Upcoming Matches</h2>
-            <Link href="/matches" className="text-sm font-semibold text-accent-dark hover:underline">
-              View all
-            </Link>
-          </div>
+        <Section title="Upcoming Matches" action={<ViewAllLink href="/matches" />}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {upcomingMatches.map((match) => (
-              <MatchCard key={match.id} match={match} />
+              <MatchCard key={match.id} match={match} watchHref={watchHref} />
             ))}
           </div>
-        </div>
+        </Section>
       ) : null}
 
-      <h2 className="mb-4 text-xl font-bold uppercase tracking-wide text-ink">Competitions</h2>
-      {competitions.length === 0 ? (
-        <p className="text-muted">No competitions added yet.</p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {competitions.map((competition) => (
-            <CompetitionCard key={competition.id} competition={competition} />
-          ))}
-        </div>
-      )}
-    </Container>
+      {highlights.length > 0 ? (
+        <section className="bg-brand py-8 sm:py-12">
+          <Container>
+            <div className="mb-6 flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+              <h2 className="text-xl font-bold uppercase tracking-wide text-white sm:text-2xl">Highlights</h2>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {highlights.map((highlight) => (
+                <HighlightCard key={highlight.id} highlight={highlight} />
+              ))}
+            </div>
+          </Container>
+        </section>
+      ) : null}
+
+      {articles.length > 0 ? (
+        <Section
+          title="Latest News"
+          action={footballCategory ? <ViewAllLink href={`/categories/${footballCategory.slug}`} /> : undefined}
+        >
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {articles.map((article) => (
+              <ArticleCard key={article.id} article={article} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      <Section title="Competitions" className="bg-surface-alt">
+        {competitions.length === 0 ? (
+          <p className="text-muted">No competitions added yet.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {competitions.map((competition) => (
+              <CompetitionCard key={competition.id} competition={competition} />
+            ))}
+          </div>
+        )}
+      </Section>
+    </>
   )
 }
