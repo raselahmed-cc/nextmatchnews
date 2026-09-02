@@ -92,12 +92,19 @@ export const getFights = async ({
   page = 1,
   eventId,
   fighterId,
+  sportSlug,
   status,
 }: {
   limit?: number
   page?: number
   eventId?: number | string
   fighterId?: number | string
+  // `fights` has no sport field of its own — it inherits sport through its
+  // event (`event.sport`). Needed whenever fights are being aggregated
+  // across events (e.g. the homepage), since this collection also holds
+  // non-boxing combat sports (UFC/MMA) and an unscoped query would blend
+  // them together.
+  sportSlug?: string
   status?: Fight['status']
 } = {}) => {
   const payload = await getPayloadClient()
@@ -107,6 +114,10 @@ export const getFights = async ({
   if (status) where.status = { equals: status }
   if (fighterId) {
     where.or = [{ fighterA: { equals: fighterId } }, { fighterB: { equals: fighterId } }]
+  }
+  if (sportSlug) {
+    const sport = await getSportBySlug(sportSlug)
+    where['event.sport'] = { equals: sport ? sport.id : -1 }
   }
 
   const result = await payload.find({
@@ -164,6 +175,23 @@ export const getAllFightSlugsForSport = async (sportSlug: string) => {
   })
 
   return result.docs
+}
+
+export const getFightersBySport = async (sportSlug: string, limit = 20) => {
+  const sport = await getSportBySlug(sportSlug)
+  if (!sport) return []
+
+  const payload = await getPayloadClient()
+
+  const result = await payload.find({
+    collection: 'fighters',
+    where: { sport: { equals: sport.id } },
+    sort: '-wins',
+    limit,
+    depth: 1,
+  })
+
+  return result.docs as unknown as PopulatedFighter[]
 }
 
 export const getFighterBySlug = async (slug: string) => {

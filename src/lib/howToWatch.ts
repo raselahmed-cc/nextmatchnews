@@ -2,6 +2,7 @@ import type { Where } from 'payload'
 
 import type { AffiliateProvider, Competition, HowToWatchGuide, Media, Sport } from '@/payload-types'
 import { getPayloadClient } from '@/lib/payload'
+import { getOrSetCache } from '@/lib/redis'
 import { getSportBySlug } from '@/lib/sports'
 
 export type PopulatedHowToWatchGuide = Omit<
@@ -75,6 +76,16 @@ export const getAllPublishedGuideSlugs = async () => {
 
   return result.docs
 }
+
+// Resolves the one "How to Watch" guide link for a sport's schedule cards
+// (MatchCard's watchHref) — cached since it's looked up once per page for
+// every card on it, and guide content changes rarely. Returns null (no
+// button rendered) rather than linking a card to a guide that doesn't exist.
+export const getWatchGuideHrefForSport = async (sportSlug: string): Promise<string | null> =>
+  getOrSetCache(`watch-guide-href:${sportSlug}`, 60 * 60, async () => {
+    const { docs } = await getGuides({ sportSlug, limit: 1 })
+    return docs[0] ? `/how-to-watch/${docs[0].slug}` : null
+  })
 
 export const getRelatedGuides = async (currentId: number, sportId: number | null | undefined, limit = 3) => {
   const payload = await getPayloadClient()
