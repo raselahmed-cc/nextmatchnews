@@ -14,6 +14,7 @@ export default function NCAAFootballPage() {
   return (
     <AmericanFootballSportHub
       sportSlug="ncaa-football"
+      categorySlug="ncaa-football"
       title="NCAA Football"
       gamesIndexHref="/ncaa/games"
       gamesBasePath="/ncaa/games"

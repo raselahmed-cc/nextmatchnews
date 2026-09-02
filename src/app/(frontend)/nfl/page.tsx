@@ -14,6 +14,7 @@ export default function NFLPage() {
   return (
     <AmericanFootballSportHub
       sportSlug="nfl"
+      categorySlug="nfl"
       title="NFL"
       gamesIndexHref="/nfl/games"
       gamesBasePath="/nfl/games"
