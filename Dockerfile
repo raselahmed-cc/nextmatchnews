@@ -12,6 +12,8 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# This project has no top-level public/ dir; keep the later COPY simple.
+RUN mkdir -p public
 ENV NEXT_TELEMETRY_DISABLED=1
 # Static generation (match/fighter/event pages) queries Payload/Postgres at
 # build time, so the build needs real env vars — mounted as a BuildKit
