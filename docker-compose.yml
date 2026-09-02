@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: .
+      secrets:
+        - env
+    container_name: nextmatchnews
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+    volumes:
+      # Persists uploaded media across rebuilds while S3/R2 credentials are
+      # unset (Payload falls back to local disk storage — see
+      # src/payload.config.ts). Switch to S3 storage before scaling past a
+      # single instance.
+      - ./media:/app/media
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+secrets:
+  env:
+    file: .env
