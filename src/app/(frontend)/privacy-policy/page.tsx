@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
 import { Container } from '@/components/ui/Container'
 import { Prose } from '@/components/ui/Prose'
@@ -37,7 +38,7 @@ export default function PrivacyPolicyPage() {
         <p>
           Some links on this site are affiliate links. If you click one and make a purchase or sign
           up, we may earn a commission at no extra cost to you. See our{' '}
-          <a href="/affiliate-disclosure">Affiliate Disclosure</a> for details.
+          <Link href="/affiliate-disclosure">Affiliate Disclosure</Link> for details.
         </p>
         <h2>Third-party services</h2>
         <p>

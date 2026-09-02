@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
 import { Container } from '@/components/ui/Container'
 import { Prose } from '@/components/ui/Prose'
@@ -30,7 +31,7 @@ export default function AboutPage() {
         <p>
           {siteConfig.name} earns commission through affiliate partnerships with streaming and
           sports-media services. This never affects the accuracy of our news or match coverage — see
-          our <a href="/affiliate-disclosure">Affiliate Disclosure</a> for details.
+          our <Link href="/affiliate-disclosure">Affiliate Disclosure</Link> for details.
         </p>
       </Prose>
     </Container>
