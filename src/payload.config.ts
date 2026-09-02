@@ -21,6 +21,7 @@ import { Fighters } from './collections/Fighters'
 import { Fights } from './collections/Fights'
 import { FootballMatches } from './collections/FootballMatches'
 import { HowToWatchGuides } from './collections/HowToWatchGuides'
+import { MatchHighlights } from './collections/MatchHighlights'
 import { Media } from './collections/Media'
 import { NFLGames } from './collections/NFLGames'
 import { Players } from './collections/Players'
@@ -41,6 +42,12 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
+  // Payload's built-in "Browse by Folder" view — a real desktop-style file
+  // browser (folders, subfolders, breadcrumbs, drag-and-drop, thumbnail
+  // cards for uploads). Enabled per-collection below (Media.ts) rather than
+  // building a custom admin component, since this is a first-party feature
+  // that already does exactly this.
+  folders: {},
   collections: [
     Users,
     Media,
@@ -62,6 +69,7 @@ export default buildConfig({
     Fights,
     AffiliateProviders,
     HowToWatchGuides,
+    MatchHighlights,
     ContactSubmissions,
   ],
   globals: [ContactPage],
@@ -131,7 +139,19 @@ export default buildConfig({
     ? [
         s3Storage({
           collections: {
-            media: true,
+            // S3_PUBLIC_URL points file URLs at the R2 bucket's custom
+            // domain (e.g. cdn.nextmatchnews.com) instead of the raw
+            // <account-id>.r2.cloudflarestorage.com endpoint — that
+            // endpoint is for authenticated S3 API calls (upload/delete),
+            // not meant to be the public-facing image URL served to
+            // visitors. Falls back to the adapter's own default (the raw
+            // endpoint) if no custom domain is set yet.
+            media: process.env.S3_PUBLIC_URL
+              ? {
+                  generateFileURL: ({ filename, prefix }) =>
+                    `${process.env.S3_PUBLIC_URL}/${prefix ? `${prefix}/` : ''}${filename}`,
+                }
+              : true,
           },
           bucket: process.env.S3_BUCKET,
           config: {

@@ -3,6 +3,8 @@ import type { CollectionConfig } from 'payload'
 import { isAdminOrEditor } from '../access/isAdminOrEditor'
 import { seoFields } from '../fields/seoFields'
 import { slugField } from '../fields/slugField'
+import { notifyIndexNow } from '../lib/indexNow'
+import { getServerSideURL } from '../lib/seo'
 
 export const Articles: CollectionConfig = {
   slug: 'articles',
@@ -12,6 +14,21 @@ export const Articles: CollectionConfig = {
   },
   versions: {
     drafts: true,
+  },
+  hooks: {
+    afterChange: [
+      // Fires on every save, including drafts — only worth notifying search
+      // engines when the doc is actually live at a public URL. Re-notifies
+      // on every edit to an already-published article too (not just the
+      // first publish), which is correct IndexNow behavior for "this URL's
+      // content changed." See src/lib/indexNow.ts for what this can and
+      // can't actually achieve for Google specifically.
+      async ({ doc }) => {
+        if (doc._status === 'published') {
+          await notifyIndexNow([`${getServerSideURL()}/news/${doc.slug}`])
+        }
+      },
+    ],
   },
   access: {
     read: ({ req: { user } }) => {

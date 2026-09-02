@@ -38,3 +38,33 @@ export const getVideoEmbedUrl = (url: string): string | null => {
 
   return null
 }
+
+// YouTube serves a predictable static thumbnail per video ID, so a preview
+// image needs no API call. Vimeo has no equivalent unauthenticated URL
+// pattern (its thumbnails require an oEmbed request) — callers should fall
+// back to a manual thumbnail upload or a placeholder for anything else.
+export const getVideoThumbnailUrl = (url: string): string | null => {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+
+  const host = parsed.hostname.replace(/^www\./, '')
+  let id: string | null = null
+
+  if (host === 'youtube.com' || host === 'm.youtube.com') {
+    if (parsed.pathname === '/watch') {
+      id = parsed.searchParams.get('v')
+    } else if (parsed.pathname.startsWith('/shorts/')) {
+      id = parsed.pathname.split('/')[2] || null
+    } else if (parsed.pathname.startsWith('/embed/')) {
+      id = parsed.pathname.split('/')[2] || null
+    }
+  } else if (host === 'youtu.be') {
+    id = parsed.pathname.slice(1) || null
+  }
+
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
+}

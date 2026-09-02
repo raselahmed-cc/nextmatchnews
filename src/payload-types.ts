@@ -87,13 +87,19 @@ export interface Config {
     fights: Fight;
     'affiliate-providers': AffiliateProvider;
     'how-to-watch-guides': HowToWatchGuide;
+    'match-highlights': MatchHighlight;
     'contact-submissions': ContactSubmission;
     'payload-kv': PayloadKv;
+    'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    'payload-folders': {
+      documentsAndFolders: 'payload-folders' | 'media';
+    };
+  };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -115,8 +121,10 @@ export interface Config {
     fights: FightsSelect<false> | FightsSelect<true>;
     'affiliate-providers': AffiliateProvidersSelect<false> | AffiliateProvidersSelect<true>;
     'how-to-watch-guides': HowToWatchGuidesSelect<false> | HowToWatchGuidesSelect<true>;
+    'match-highlights': MatchHighlightsSelect<false> | MatchHighlightsSelect<true>;
     'contact-submissions': ContactSubmissionsSelect<false> | ContactSubmissionsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
+    'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -197,6 +205,7 @@ export interface Media {
    */
   alt: string;
   caption?: string | null;
+  folder?: (number | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -208,6 +217,42 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-folders".
+ */
+export interface FolderInterface {
+  id: number;
+  name: string;
+  folder?: (number | null) | FolderInterface;
+  documentsAndFolders?: {
+    docs?: (
+      | {
+          relationTo?: 'payload-folders';
+          value: number | FolderInterface;
+        }
+      | {
+          relationTo?: 'media';
+          value: number | Media;
+        }
+    )[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  folderType?: 'media'[] | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -929,6 +974,35 @@ export interface HowToWatchGuide {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-highlights".
+ */
+export interface MatchHighlight {
+  id: number;
+  /**
+   * e.g. "Arsenal 3-1 Chelsea — Highlights & Goals"
+   */
+  title: string;
+  /**
+   * A YouTube or Vimeo video URL, e.g. https://www.youtube.com/watch?v=... or https://vimeo.com/...
+   */
+  videoUrl: string;
+  /**
+   * Optional. YouTube videos get a thumbnail automatically — upload one here to override it, or if the video is hosted on Vimeo (which has no automatic thumbnail).
+   */
+  thumbnail?: (number | null) | Media;
+  /**
+   * Which sport hub page(s) this highlight appears on.
+   */
+  sport: number | Sport;
+  relatedMatch?: (number | null) | FootballMatch;
+  relatedNFLGame?: (number | null) | NflGame;
+  relatedFight?: (number | null) | Fight;
+  publishedAt: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Read-only record of what visitors submitted through /contact.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1048,8 +1122,16 @@ export interface PayloadLockedDocument {
         value: number | HowToWatchGuide;
       } | null)
     | ({
+        relationTo: 'match-highlights';
+        value: number | MatchHighlight;
+      } | null)
+    | ({
         relationTo: 'contact-submissions';
         value: number | ContactSubmission;
+      } | null)
+    | ({
+        relationTo: 'payload-folders';
+        value: number | FolderInterface;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1124,6 +1206,7 @@ export interface UsersSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   caption?: T;
+  folder?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -1135,6 +1218,20 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1487,6 +1584,22 @@ export interface HowToWatchGuidesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-highlights_select".
+ */
+export interface MatchHighlightsSelect<T extends boolean = true> {
+  title?: T;
+  videoUrl?: T;
+  thumbnail?: T;
+  sport?: T;
+  relatedMatch?: T;
+  relatedNFLGame?: T;
+  relatedFight?: T;
+  publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "contact-submissions_select".
  */
 export interface ContactSubmissionsSelect<T extends boolean = true> {
@@ -1504,6 +1617,18 @@ export interface ContactSubmissionsSelect<T extends boolean = true> {
 export interface PayloadKvSelect<T extends boolean = true> {
   key?: T;
   data?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-folders_select".
+ */
+export interface PayloadFoldersSelect<T extends boolean = true> {
+  name?: T;
+  folder?: T;
+  documentsAndFolders?: T;
+  folderType?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
