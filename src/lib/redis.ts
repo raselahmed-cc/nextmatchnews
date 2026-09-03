@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { Redis } from '@upstash/redis'
 
 // Constructed lazily (not via Redis.fromEnv(), which throws immediately if
@@ -26,26 +27,45 @@ export const getOrSetCache = async <T>(
   fetcher: () => Promise<T>,
 ): Promise<T> => {
   if (!redis) return fetcher()
+  const client = redis
 
-  try {
-    const cached = await redis.get<T>(key)
-    if (cached !== null && cached !== undefined) {
-      return cached
-    }
-  } catch (error) {
-    console.error(`[redis] read failed for key "${key}", falling back to live fetch:`, error)
-    return fetcher()
-  }
+  // Upstash's REST client makes its get/set calls with `fetch(..., { cache:
+  // 'no-store' })` under the hood. Next treats any such fetch made during
+  // rendering as a "dynamic API" and bails the *whole route* to per-request
+  // rendering the moment it's awaited — even though the try/catch below
+  // means the page renders fine regardless of whether Redis is reachable.
+  // That silently broke `export const revalidate = ...` (ISR) on every page
+  // that calls this (see CLAUDE.md §32) — confirmed by the production build
+  // marking those routes `ƒ` (dynamic) instead of `○`/`●` (static/ISR).
+  // unstable_cache exempts fetches made inside it from that tracking, so
+  // wrapping the whole read-or-refresh flow here is what lets those routes
+  // stay static/ISR again. Its own `revalidate` mirrors `ttlSeconds` so this
+  // doesn't change the effective cache lifetime, just who's serving it.
+  return unstable_cache(
+    async () => {
+      try {
+        const cached = await client.get<T>(key)
+        if (cached !== null && cached !== undefined) {
+          return cached
+        }
+      } catch (error) {
+        console.error(`[redis] read failed for key "${key}", falling back to live fetch:`, error)
+        return fetcher()
+      }
 
-  const fresh = await fetcher()
+      const fresh = await fetcher()
 
-  try {
-    await redis.set(key, fresh, { ex: ttlSeconds })
-  } catch (error) {
-    console.error(`[redis] write failed for key "${key}":`, error)
-  }
+      try {
+        await client.set(key, fresh, { ex: ttlSeconds })
+      } catch (error) {
+        console.error(`[redis] write failed for key "${key}":`, error)
+      }
 
-  return fresh
+      return fresh
+    },
+    ['getOrSetCache', key],
+    { revalidate: ttlSeconds },
+  )()
 }
 
 /**
