@@ -48,6 +48,20 @@ const runSync = async <T>(fn: () => Promise<T>): Promise<SyncOutcome<T>> => {
  * follow-up using api-sports.io's date/live-filtered endpoints instead of
  * the full-season one used here.
  */
+const SPORT_KEYS = ['football', 'nfl', 'ncaa', 'rugby', 'f1', 'nba'] as const
+type SportKey = (typeof SPORT_KEYS)[number]
+
+// Optional ?only=nfl,ncaa restricts a run to specific sports — useful for
+// backfilling/testing one sport without spending api-sports.io quota on the
+// other five every time. Omitting it keeps the previous full-sync behavior.
+const parseOnly = (request: Request): Set<SportKey> | null => {
+  const raw = new URL(request.url).searchParams.get('only')
+  if (!raw) return null
+  const requested = raw.split(',').map((s) => s.trim().toLowerCase())
+  const valid = requested.filter((s): s is SportKey => (SPORT_KEYS as readonly string[]).includes(s))
+  return valid.length > 0 ? new Set(valid) : null
+}
+
 const handleSyncRequest = async (request: Request): Promise<NextResponse> => {
   const secret = process.env.SYNC_TRIGGER_SECRET
   if (!secret) {
@@ -59,13 +73,19 @@ const handleSyncRequest = async (request: Request): Promise<NextResponse> => {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const only = parseOnly(request)
+  const wants = (key: SportKey) => !only || only.has(key)
+  const skipped: SyncOutcome<never> = { ok: true, result: undefined as never }
+
   const [football, nfl, ncaa, rugby, f1, nba] = await Promise.all([
-    runSync<FootballSyncResult>(() => syncFootballCompetition(PREMIER_LEAGUE_ID)),
-    runSync<NFLSyncResult>(() => syncNFLCompetition('nfl', 'NFL', NFL_LEAGUE_ID)),
-    runSync<NFLSyncResult>(() => syncNFLCompetition('ncaa-football', 'NCAA Football', NCAA_LEAGUE_ID)),
-    runSync<RugbySyncResult>(() => syncRugbyCompetition(SIX_NATIONS_LEAGUE_ID)),
-    runSync<F1SyncResult>(() => syncF1Season()),
-    runSync<BasketballSyncResult>(() => syncBasketballCompetition(NBA_LEAGUE_ID)),
+    wants('football') ? runSync<FootballSyncResult>(() => syncFootballCompetition(PREMIER_LEAGUE_ID)) : skipped,
+    wants('nfl') ? runSync<NFLSyncResult>(() => syncNFLCompetition('nfl', 'NFL', NFL_LEAGUE_ID)) : skipped,
+    wants('ncaa')
+      ? runSync<NFLSyncResult>(() => syncNFLCompetition('ncaa-football', 'NCAA Football', NCAA_LEAGUE_ID))
+      : skipped,
+    wants('rugby') ? runSync<RugbySyncResult>(() => syncRugbyCompetition(SIX_NATIONS_LEAGUE_ID)) : skipped,
+    wants('f1') ? runSync<F1SyncResult>(() => syncF1Season()) : skipped,
+    wants('nba') ? runSync<BasketballSyncResult>(() => syncBasketballCompetition(NBA_LEAGUE_ID)) : skipped,
   ])
 
   const ok = football.ok && nfl.ok && ncaa.ok && rugby.ok && f1.ok && nba.ok
