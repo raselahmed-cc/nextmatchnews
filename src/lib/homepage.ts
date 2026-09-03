@@ -41,7 +41,7 @@ const fromFootballMatch = (match: PopulatedFootballMatch): HomeFixture => ({
   scoreB: match.awayScore,
 })
 
-const fromNFLGame = (game: PopulatedNFLGame): HomeFixture => {
+export const fromNFLGame = (game: PopulatedNFLGame): HomeFixture => {
   const isNCAA = game.competition.sport.slug === 'ncaa-football'
   return {
     id: `nfl-${game.id}`,

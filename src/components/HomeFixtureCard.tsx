@@ -4,14 +4,34 @@ import type { HomeFixture } from '@/lib/homepage'
 import { cn } from '@/lib/cn'
 import { MediaImage } from './MediaImage'
 
-const formatKickoff = (value: string) =>
-  new Date(value).toLocaleString('en-US', {
+const formatKickoff = (value: string) => {
+  const date = new Date(value)
+  const now = new Date()
+  const dayMs = 24 * 60 * 60 * 1000
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diffDays = Math.round((startOfDay(date) - startOfDay(now)) / dayMs)
+
+  const time = date.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })
+  if (diffDays === 0) return `Today, ${time}`
+  if (diffDays === 1) return `Tomorrow, ${time}`
+
+  return date.toLocaleString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+const initials = (name: string) =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase()
 
 const ParticipantRow = ({
   participant,
@@ -25,23 +45,21 @@ const ParticipantRow = ({
   dark?: boolean
 }) => (
   <div className="flex items-center justify-between gap-3">
-    <div className="flex min-w-0 items-center gap-2">
-      {participant.media ? (
-        <div
-          className={cn(
-            'h-6 w-6 shrink-0 overflow-hidden rounded-full',
-            dark ? 'bg-white/10' : 'bg-surface-alt',
-          )}
-        >
-          <MediaImage media={participant.media} />
-        </div>
-      ) : null}
+    <div className="flex min-w-0 items-center gap-2.5">
+      <div
+        className={cn(
+          'flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-bold',
+          dark ? 'bg-white/10 text-white/70' : 'bg-surface-alt text-muted ring-1 ring-border/60',
+        )}
+      >
+        {participant.media ? <MediaImage media={participant.media} /> : initials(participant.name)}
+      </div>
       <span className={cn('truncate text-sm font-semibold', dark ? 'text-white' : 'text-ink')}>
         {participant.name}
       </span>
     </div>
     {showScore ? (
-      <span className={cn('shrink-0 text-sm font-bold', dark ? 'text-white' : 'text-ink')}>
+      <span className={cn('shrink-0 text-sm font-bold tabular-nums', dark ? 'text-white' : 'text-ink')}>
         {typeof score === 'number' ? score : '–'}
       </span>
     ) : null}
@@ -66,12 +84,21 @@ export const HomeFixtureCard = ({
     <Link
       href={`${fixture.basePath}/${fixture.slug}`}
       className={cn(
-        'flex flex-col gap-3 rounded-lg border p-4 transition-colors',
+        'group/card relative flex flex-col gap-3 overflow-hidden rounded-xl border p-4 transition-all',
         isResult
           ? 'border-white/10 bg-white/5 hover:bg-white/10'
-          : 'w-64 shrink-0 snap-start border-border bg-surface hover:shadow-md',
+          : 'w-72 shrink-0 snap-start border-border bg-surface shadow-sm hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-lg',
       )}
     >
+      {!isResult ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-accent transition-transform duration-200 group-hover/card:scale-x-100',
+            fixture.status === 'live' && 'scale-x-100',
+          )}
+        />
+      ) : null}
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
@@ -92,13 +119,33 @@ export const HomeFixtureCard = ({
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="relative flex flex-col gap-2">
         <ParticipantRow
           participant={fixture.participantA}
           score={fixture.scoreA}
           showScore={showScore}
           dark={isResult}
         />
+        {!showScore ? (
+          <div className="flex items-center gap-2">
+            <span
+              className={cn('h-px flex-1', isResult ? 'bg-white/15' : 'bg-border')}
+              aria-hidden="true"
+            />
+            <span
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest',
+                isResult ? 'bg-white/10 text-white/50' : 'bg-surface-alt text-muted',
+              )}
+            >
+              VS
+            </span>
+            <span
+              className={cn('h-px flex-1', isResult ? 'bg-white/15' : 'bg-border')}
+              aria-hidden="true"
+            />
+          </div>
+        ) : null}
         <ParticipantRow
           participant={fixture.participantB}
           score={fixture.scoreB}

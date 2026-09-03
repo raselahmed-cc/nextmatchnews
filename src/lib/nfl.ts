@@ -117,6 +117,68 @@ export const getNFLGameMetadataForSport = async (
   return getMatchMetadata(game, basePath)
 }
 
+// Real head-to-head history for a game-detail page's "Previous Meetings"
+// section — every past game where these two teams played each other,
+// regardless of which was home/away, excluding the game being viewed.
+export const getHeadToHeadGames = async (
+  teamAId: number | string,
+  teamBId: number | string,
+  excludeGameId: number | string,
+  limit = 3,
+): Promise<PopulatedNFLGame[]> => {
+  const payload = await getPayloadClient()
+
+  const result = await payload.find({
+    collection: 'nfl-games',
+    where: {
+      and: [
+        { id: { not_equals: excludeGameId } },
+        { status: { equals: 'finished' } },
+        {
+          or: [
+            { and: [{ homeTeam: { equals: teamAId } }, { awayTeam: { equals: teamBId } }] },
+            { and: [{ homeTeam: { equals: teamBId } }, { awayTeam: { equals: teamAId } }] },
+          ],
+        },
+      ],
+    },
+    sort: '-kickoffTime',
+    limit,
+    depth: 2,
+  })
+
+  return result.docs as unknown as PopulatedNFLGame[]
+}
+
+// The rest of this game's broadcast week — mirrors the week-by-week
+// schedule browsing pattern (e.g. nfl.com/scores) on the game-detail page
+// itself, using the game's own `week`/`season` text fields rather than a
+// separate schedule concept.
+export const getOtherGamesInWeek = async (
+  competitionId: number | string,
+  week: string,
+  excludeGameId: number | string,
+  limit = 8,
+): Promise<PopulatedNFLGame[]> => {
+  const payload = await getPayloadClient()
+
+  const result = await payload.find({
+    collection: 'nfl-games',
+    where: {
+      and: [
+        { id: { not_equals: excludeGameId } },
+        { competition: { equals: competitionId } },
+        { week: { equals: week } },
+      ],
+    },
+    sort: 'kickoffTime',
+    limit,
+    depth: 2,
+  })
+
+  return result.docs as unknown as PopulatedNFLGame[]
+}
+
 export const getAllNFLGameSlugsForSport = async (sportSlug: string) => {
   const competitionIds = await getCompetitionIdsForSport(sportSlug)
   const payload = await getPayloadClient()

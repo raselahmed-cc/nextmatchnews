@@ -26,3 +26,18 @@ export const getHighlightsBySport = async (
 
   return result.docs as unknown as PopulatedHighlight[]
 }
+
+// Cross-sport feed for the homepage — same query shape as
+// getHighlightsBySport, just without the sport filter.
+export const getRecentHighlights = async (limit = 6): Promise<PopulatedHighlight[]> => {
+  const payload = await getPayloadClient()
+
+  const result = await payload.find({
+    collection: 'match-highlights',
+    sort: '-publishedAt',
+    limit,
+    depth: 1,
+  })
+
+  return result.docs as unknown as PopulatedHighlight[]
+}

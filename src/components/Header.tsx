@@ -20,7 +20,7 @@ export const Header = () => (
         NextMatch<span className="text-accent">News</span>
       </Link>
 
-      <nav aria-label="Primary" className="hidden md:block">
+      <nav aria-label="Primary" className="hidden lg:block">
         <ul className="flex items-center gap-6 text-sm font-semibold uppercase tracking-wide">
           {navLinks.map((link) => (
             <li key={link.href}>
@@ -32,7 +32,7 @@ export const Header = () => (
         </ul>
       </nav>
 
-      <details className="relative md:hidden">
+      <details className="relative lg:hidden">
         <summary
           aria-label="Open menu"
           className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md border border-white/20 [&::-webkit-details-marker]:hidden"

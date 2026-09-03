@@ -41,6 +41,11 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      graphics: {
+        Logo: '@/components/admin/Logo#Logo',
+      },
+    },
   },
   // Payload's built-in "Browse by Folder" view — a real desktop-style file
   // browser (folders, subfolders, breadcrumbs, drag-and-drop, thumbnail
