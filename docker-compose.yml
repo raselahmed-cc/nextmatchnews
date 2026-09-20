@@ -2,6 +2,12 @@ services:
   app:
     build:
       context: .
+      # BuildKit builds run in an isolated context that isn't attached to
+      # the compose network by default — static generation queries the DB
+      # at build time (see the Dockerfile's build stage), so without this
+      # the "postgres" hostname doesn't resolve during `docker compose
+      # build` even though it resolves fine for the running container.
+      network: nextmatchnews_net
       secrets:
         - env
     container_name: nextmatchnews
@@ -53,6 +59,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+networks:
+  default:
+    name: nextmatchnews_net
 
 secrets:
   env:
