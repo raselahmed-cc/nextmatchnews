@@ -2,21 +2,23 @@ services:
   app:
     build:
       context: .
-      # BuildKit builds run in an isolated context that isn't attached to
-      # the compose network by default — static generation queries the DB
-      # at build time (see the Dockerfile's build stage), so without this
-      # the "postgres" hostname doesn't resolve during `docker compose
-      # build` even though it resolves fine for the running container.
-      network: nextmatchnews_net
+      # The default (docker-container) buildx driver doesn't support
+      # attaching to an arbitrary compose bridge network — "host" is one
+      # of the few modes it does support, and static generation needs to
+      # reach Postgres at build time (see the Dockerfile's build stage).
+      network: host
       secrets:
         - env
     container_name: nextmatchnews
     restart: always
+    # Host networking (not the compose bridge network) so the exact same
+    # DATABASE_URL (127.0.0.1:5433, Postgres's published port) works
+    # identically at build time and at runtime — no separate build-time
+    # hostname to keep in sync with the runtime one.
+    network_mode: host
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:3000:3000"
     env_file:
       - .env
     volumes:
@@ -34,9 +36,9 @@ services:
   # Self-hosted replacement for the managed Neon Postgres this project
   # started on — same database engine, same @payloadcms/db-postgres
   # adapter, just no metered/quota-limited usage since this VPS is a fixed
-  # cost regardless of query volume. Not exposed beyond 127.0.0.1: the app
-  # reaches it over the compose network by service name ("postgres"); the
-  # loopback-only port is for admin access via an SSH tunnel only.
+  # cost regardless of query volume. Published to 127.0.0.1 only (never
+  # public) — the app (host networking, see above) reaches it there, and
+  # so can an SSH tunnel for admin access.
   postgres:
     # Matches Neon's server version (18) — pg_dump/pg_restore refuse to
     # operate across a major-version mismatch, and this is the version the
@@ -59,10 +61,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-networks:
-  default:
-    name: nextmatchnews_net
 
 secrets:
   env:
