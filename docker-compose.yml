@@ -22,6 +22,30 @@ services:
       timeout: 10s
       retries: 3
 
+  # Self-hosted replacement for the managed Neon Postgres this project
+  # started on — same database engine, same @payloadcms/db-postgres
+  # adapter, just no metered/quota-limited usage since this VPS is a fixed
+  # cost regardless of query volume. Not exposed beyond 127.0.0.1: the app
+  # reaches it over the compose network by service name ("postgres"); the
+  # loopback-only port is for admin access via an SSH tunnel only.
+  postgres:
+    image: postgres:16-alpine
+    container_name: nextmatchnews-postgres
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: nextmatchnews
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d nextmatchnews"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 secrets:
   env:
     file: .env
