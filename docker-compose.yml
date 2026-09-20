@@ -29,7 +29,10 @@ services:
   # reaches it over the compose network by service name ("postgres"); the
   # loopback-only port is for admin access via an SSH tunnel only.
   postgres:
-    image: postgres:16-alpine
+    # Matches Neon's server version (18) — pg_dump/pg_restore refuse to
+    # operate across a major-version mismatch, and this is the version the
+    # existing data was migrated from.
+    image: postgres:18-alpine
     container_name: nextmatchnews-postgres
     restart: always
     env_file:
